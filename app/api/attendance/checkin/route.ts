@@ -7,7 +7,8 @@ const hashToken = (token: string) => createHash('sha256').update(token).digest('
 export async function POST(request: Request) {
   const auth = await authenticate(request);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-  if (auth.value.role !== 'student') return NextResponse.json({ error: 'Hanya akun siswa yang dapat melakukan absensi.' }, { status: 403 });
+  // Semua akun terautentikasi boleh melakukan check-in, termasuk admin yang juga ikut hadir.
+  // Admin tidak diwajibkan scan; ini hanya membuka akses jika memang ingin tercatat hadir.
   let body: { token?: string };
   try { body = await request.json(); } catch { return NextResponse.json({ error: 'QR tidak terbaca.' }, { status: 400 }); }
   const token = String(body.token || '').trim();
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
   if (session.status !== 'active') return NextResponse.json({ error: 'Sesi absensi ini sudah ditutup admin.' }, { status: 410 });
   if (session.attendance_date !== jakartaDate(now)) return NextResponse.json({ error: 'QR hanya berlaku pada tanggal pembuatannya.' }, { status: 410 });
   if (now < new Date(session.starts_at) || now >= new Date(session.expires_at)) return NextResponse.json({ error: 'QR sudah kedaluwarsa. Minta admin membuat QR baru.' }, { status: 410 });
-  if (session.class_name && session.class_name !== auth.value.profile.class_name) return NextResponse.json({ error: `QR ini hanya untuk kelas ${session.class_name}.` }, { status: 403 });
+  if (auth.value.role === 'student' && session.class_name && session.class_name !== auth.value.profile.class_name) return NextResponse.json({ error: `QR ini hanya untuk kelas ${session.class_name}.` }, { status: 403 });
   const { data: existing } = await auth.value.adminClient.from('attendance_records').select('id,checked_in_at').eq('session_id', session.id).eq('student_id', auth.value.user.id).maybeSingle();
   if (existing) return NextResponse.json({ error: 'Kamu sudah melakukan absensi pada sesi ini.', alreadyCheckedIn: true, checkedInAt: existing.checked_in_at }, { status: 409 });
   const { data: record, error: insertError } = await auth.value.adminClient.from('attendance_records').insert({ session_id: session.id, student_id: auth.value.user.id, attendance_date: session.attendance_date, checked_in_at: now.toISOString(), status: 'present' }).select('id,checked_in_at,status').single();
