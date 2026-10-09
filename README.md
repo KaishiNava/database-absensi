@@ -9,9 +9,11 @@ Starter Next.js + TypeScript + Supabase untuk sistem absensi siswa. Termasuk lan
 3. Salin `.env.example` menjadi `.env.local`.
 4. Isi `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_ANON_KEY` dari Supabase Project Settings → API.
 5. Buka Supabase → SQL Editor, jalankan isi `supabase/schema.sql`.
+6. Jalankan juga isi `supabase/attendance.sql` untuk membuat tabel sesi QR dan catatan absensi.
 6. Di Supabase Auth, buat akun pengguna. Profil akan dibuat otomatis oleh trigger.
 7. Untuk menjadikan akun sebagai admin, salin UUID akun dari Authentication → Users lalu jalankan query `UPDATE` yang dikomentari di akhir schema.sql dengan UUID tersebut.
-8. Jalankan `npm run dev`.
+8. Isi `SUPABASE_SERVICE_ROLE_KEY` di `.env.local` untuk API server (jangan pernah commit file env).
+9. Jalankan `npm run dev`.
 
 ## Deploy GitHub + Vercel
 
@@ -37,3 +39,14 @@ Badge biru hanya tampilan UI berdasarkan `profiles.is_verified`; akses admin har
 - Admin student creation uses `POST /api/admin/students`. Configure `SUPABASE_SERVICE_ROLE_KEY` as a **server-only** Vercel environment variable (never `NEXT_PUBLIC_`, never commit the real key), then redeploy. The API verifies the caller's Supabase session and checks the role in the database before creating a student.
 - The schema gives admins read access to profiles via `public.is_admin()` and retains student self-read. Review policies before production use.
 - QR generation/scanning, expiry, attendance records, and reports are still not implemented in this package.
+
+## API absensi
+
+- `POST /api/attendance/sessions` — admin membuat QR, default durasi 1 jam.
+- `GET /api/attendance/sessions` — admin melihat daftar sesi.
+- `PATCH /api/attendance/sessions` — admin menutup sesi.
+- `POST /api/attendance/checkin` — siswa memvalidasi token dan mencatat kehadiran.
+- `GET /api/attendance/history` — riwayat akun yang sedang login.
+- `GET /api/attendance/report?date=YYYY-MM-DD` — laporan admin.
+
+Semua endpoint memvalidasi bearer access token dan membaca role dari tabel `profiles`; kunci service role hanya digunakan server-side.
