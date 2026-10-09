@@ -44,18 +44,17 @@ export default function AdminPage() {
       setProfile(p);
       if(p.role!=='admin'){setIsAdmin(false);setStatus(`Akses ditolak: database yang dipakai website membaca role "${p.role}".`);return;}
       setIsAdmin(true);setStatus('');
-      const {data,error}=await supabase.from('profiles').select('id,full_name,role,class_name,is_verified').order('created_at',{ascending:false});
-      if(error) setNotice('Role admin terbaca, tetapi daftar profil belum bisa dimuat. Periksa RLS: '+error.message);
-      else setStudents((data||[]) as Student[]);
       try {
-        const [sessionResult, reportResult] = await Promise.all([
+        const [studentResult, sessionResult, reportResult] = await Promise.all([
+          attendanceRequest('/api/admin/students'),
           attendanceRequest('/api/attendance/sessions'),
           attendanceRequest('/api/attendance/report')
         ]);
+        setStudents((studentResult.students || []) as Student[]);
         setSessions((sessionResult.sessions || []) as AttendanceSession[]);
         setRecords((reportResult.records || []) as AttendanceRecord[]);
       } catch (e) {
-        setNotice(e instanceof Error ? e.message : 'Laporan absensi belum dapat dimuat. Jalankan supabase/attendance.sql terlebih dahulu.');
+        setNotice(e instanceof Error ? e.message : 'Data admin belum dapat dimuat. Periksa konfigurasi server dan database.');
       }
     } catch(e) {
       setIsAdmin(false);setStatus(e instanceof Error?e.message:'Gagal membaca profil.');
