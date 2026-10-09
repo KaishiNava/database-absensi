@@ -30,3 +30,10 @@ Sudah ada UI responsif, login Supabase, dashboard/profil yang membaca data profi
 ## Catatan keamanan
 
 Badge biru hanya tampilan UI berdasarkan `profiles.is_verified`; akses admin harus selalu divalidasi di database/API dengan RLS atau fungsi server. Jangan percaya role yang dikirim dari browser. Untuk admin sungguhan, buat akun melalui Auth lalu naikkan role lewat SQL Editor pemilik proyek.
+
+## Update: admin debugging and create-student endpoint
+
+- `/admin` now shows the currently authenticated UUID, Supabase project host, and role returned by the live `profiles` query if access is denied. Compare the project host to the Supabase project URL where you ran SQL. If the role still says `student`, the deployed website is reading a different project/profile or the SQL update targeted another UUID.
+- Admin student creation uses `POST /api/admin/students`. Configure `SUPABASE_SERVICE_ROLE_KEY` as a **server-only** Vercel environment variable (never `NEXT_PUBLIC_`, never commit the real key), then redeploy. The API verifies the caller's Supabase session and checks the role in the database before creating a student.
+- The schema gives admins read access to profiles via `public.is_admin()` and retains student self-read. Review policies before production use.
+- QR generation/scanning, expiry, attendance records, and reports are still not implemented in this package.
